@@ -37,6 +37,24 @@
 #include "ngtcp2_macro.h"
 #include "ngtcp2_net.h"
 
+void print_hex(const uint8_t *data, size_t len)
+{
+  int i=0;
+  for(i=0;i<len;++i)
+  {
+    printf("%02x ",data[i]);
+  }
+  printf("\n");
+}
+void print_secrets(const uint8_t *secret, size_t secretlen, const uint8_t *key,
+                   size_t keylen, const uint8_t *iv, size_t ivlen,
+                   const uint8_t *hp, size_t hplen) {
+  printf("cisco_debug\nsecret ");print_hex(secret, secretlen);
+  printf("KEY ");print_hex(key, keylen);
+  printf("IV ");print_hex(iv, ivlen);
+  printf("HP ");print_hex(hp, hplen);
+}
+
 ngtcp2_crypto_md *ngtcp2_crypto_md_init(ngtcp2_crypto_md *md,
                                         void *md_native_handle) {
   md->native_handle = md_native_handle;
@@ -289,6 +307,8 @@ int ngtcp2_crypto_derive_and_install_rx_key(ngtcp2_conn *conn, uint8_t *key,
   case NGTCP2_CRYPTO_LEVEL_HANDSHAKE:
     rv = ngtcp2_conn_install_rx_handshake_key(conn, &aead_ctx, iv, ivlen,
                                               &hp_ctx);
+    printf("\nCrypto-Handshake-rx\n");
+    print_secrets(secret,secretlen,key,16,iv,ivlen,hp_key,16);
     if (rv != 0) {
       goto fail;
     }
@@ -303,6 +323,8 @@ int ngtcp2_crypto_derive_and_install_rx_key(ngtcp2_conn *conn, uint8_t *key,
 
     rv = ngtcp2_conn_install_rx_key(conn, secret, secretlen, &aead_ctx, iv,
                                     ivlen, &hp_ctx);
+    printf("\nCrypto-App-rx\n");
+    print_secrets(secret,secretlen,key,16,iv,ivlen,hp_key,16);
     if (rv != 0) {
       goto fail;
     }
@@ -430,6 +452,8 @@ int ngtcp2_crypto_derive_and_install_tx_key(ngtcp2_conn *conn, uint8_t *key,
   case NGTCP2_CRYPTO_LEVEL_HANDSHAKE:
     rv = ngtcp2_conn_install_tx_handshake_key(conn, &aead_ctx, iv, ivlen,
                                               &hp_ctx);
+    printf("\nCrypto-Handshake-tx\n");
+    print_secrets(secret,secretlen,key,16,iv,ivlen,hp_key,16);
     if (rv != 0) {
       goto fail;
     }
@@ -443,6 +467,8 @@ int ngtcp2_crypto_derive_and_install_tx_key(ngtcp2_conn *conn, uint8_t *key,
   case NGTCP2_CRYPTO_LEVEL_APPLICATION:
     rv = ngtcp2_conn_install_tx_key(conn, secret, secretlen, &aead_ctx, iv,
                                     ivlen, &hp_ctx);
+    printf("\nCrypto-App-tx\n");
+    print_secrets(secret,secretlen,key,16,iv,ivlen,hp_key,16);
     if (rv != 0) {
       goto fail;
     }
@@ -585,6 +611,13 @@ int ngtcp2_crypto_derive_and_install_initial_key(
   rv = ngtcp2_conn_install_initial_key(conn, &rx_aead_ctx, rx_iv, &rx_hp_ctx,
                                        &tx_aead_ctx, tx_iv, &tx_hp_ctx,
                                        NGTCP2_CRYPTO_INITIAL_IVLEN);
+  printf("\nInit secrets rx-\n");
+  print_secrets(rx_secret,NGTCP2_CRYPTO_INITIAL_SECRETLEN,rx_key,NGTCP2_CRYPTO_INITIAL_KEYLEN,rx_iv
+                  ,NGTCP2_CRYPTO_INITIAL_IVLEN,rx_hp_key,NGTCP2_CRYPTO_INITIAL_KEYLEN);
+  printf("\nInit secrets tx-\n");
+  print_secrets(tx_secret,NGTCP2_CRYPTO_INITIAL_SECRETLEN,tx_key,NGTCP2_CRYPTO_INITIAL_KEYLEN,tx_iv
+                  ,NGTCP2_CRYPTO_INITIAL_IVLEN,tx_hp_key,NGTCP2_CRYPTO_INITIAL_KEYLEN);
+
   if (rv != 0) {
     goto fail;
   }
